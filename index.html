@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthGuard AI Railway - Microservices Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .service-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .service-card h3 {
+            color: #667eea;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .query-section {
+            margin-bottom: 20px;
+        }
+        
+        .query-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .query-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .search-btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .search-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .search-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .result-item {
+            background: white;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+        
+        .status-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status-healthy {
+            background: #28a745;
+        }
+        
+        .status-unhealthy {
+            background: #dc3545;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: white;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>HealthGuard AI Railway</h1>
+            <p>Microservices Healthcare Platform - Deployed on Railway</p>
+            <p><strong>Live URL:</strong> https://healthguardairailway-production.up.railway.app</p>
+        </div>
+        
+        <div class="services-grid">
+            <!-- Hospital Service -->
+            <div class="service-card">
+                <h3>🏥 Hospital Service</h3>
+                <p>Search for hospitals and medical facilities</p>
+                
+                <div class="query-section">
+                    <input type="text" id="hospitalQuery" class="query-input" 
+                           placeholder="Search hospitals (e.g., cardiology, emergency)" 
+                           value="cardiology">
+                    <button onclick="searchHospitals()" class="search-btn" id="hospitalBtn">
+                        Search Hospitals
+                    </button>
+                </div>
+                
+                <div id="hospitalResults" class="results"></div>
+            </div>
+            
+            <!-- Insurance Service -->
+            <div class="service-card">
+                <h3>🛡️ Insurance Service</h3>
+                <p>Find insurance plans and coverage options</p>
+                
+                <div class="query-section">
+                    <input type="text" id="insuranceQuery" class="query-input" 
+                           placeholder="Search insurance (e.g., affordable, premium)" 
+                           value="affordable">
+                    <button onclick="searchInsurance()" class="search-btn" id="insuranceBtn">
+                        Search Insurance
+                    </button>
+                </div>
+                
+                <div id="insuranceResults" class="results"></div>
+            </div>
+        </div>
+        
+        <!-- System Status -->
+        <div class="status-panel">
+            <h3>🔍 System Status</h3>
+            <div id="systemStatus">
+                <div class="status-item">
+                    <span>Loading system status...</span>
+                </div>
+            </div>
+            <button onclick="checkSystemStatus()" class="search-btn" style="margin-top: 15px;">
+                Refresh Status
+            </button>
+        </div>
+        
+        <div class="footer">
+            <p>Microservices Architecture: Gateway + Hospital + Insurance + RAG Services</p>
+            <p>Deployed on Railway Cloud Platform</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://healthguardairailway-production.up.railway.app/api';
+        
+        // Search Hospitals
+        async function searchHospitals() {
+            const query = document.getElementById('hospitalQuery').value;
+            const resultsDiv = document.getElementById('hospitalResults');
+            const btn = document.getElementById('hospitalBtn');
+            
+            btn.disabled = true;
+            btn.textContent = 'Searching...';
+            resultsDiv.innerHTML = '';
+            resultsDiv.classList.add('show');
+            
+            try {
+                const response = await fetch(`${API_BASE}/hospital/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data && data.data.data) {
+                    const hospitals = data.data.data;
+                    resultsDiv.innerHTML = hospitals.map(hospital => `
+                        <div class="result-item">
+                            <strong>${hospital.name}</strong><br>
+                            <small>Location: ${hospital.location} | Rating: ${hospital.rating}/5</small><br>
+                            <small>Specialties: ${hospital.specialties.join(', ')}</small>
+                        </div>
+                    `).join('');
+                } else {
+                    resultsDiv.innerHTML = '<div class="result-item error">No hospitals found</div>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="result-item error">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Search Hospitals';
+            }
+        }
+        
+        // Search Insurance
+        async function searchInsurance() {
+            const query = document.getElementById('insuranceQuery').value;
+            const resultsDiv = document.getElementById('insuranceResults');
+            const btn = document.getElementById('insuranceBtn');
+            
+            btn.disabled = true;
+            btn.textContent = 'Searching...';
+            resultsDiv.innerHTML = '';
+            resultsDiv.classList.add('show');
+            
+            try {
+                const response = await fetch(`${API_BASE}/insurance/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data && data.data.data) {
+                    const plans = data.data.data;
+                    resultsDiv.innerHTML = plans.map(plan => `
+                        <div class="result-item">
+                            <strong>${plan.plan_name}</strong> by ${plan.provider}<br>
+                            <small>Type: ${plan.type} | Premium: $${plan.monthly_premium}/month</small><br>
+                            <small>Coverage: ${plan.coverage.join(', ')}</small>
+                        </div>
+                    `).join('');
+                } else {
+                    resultsDiv.innerHTML = '<div class="result-item error">No insurance plans found</div>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="result-item error">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Search Insurance';
+            }
+        }
+        
+        // Check System Status
+        async function checkSystemStatus() {
+            const statusDiv = document.getElementById('systemStatus');
+            
+            try {
+                const response = await fetch('https://healthguardairailway-production.up.railway.app/health');
+                const data = await response.json();
+                
+                let statusHTML = '';
+                
+                if (data.services) {
+                    Object.keys(data.services).forEach(serviceName => {
+                        const service = data.services[serviceName];
+                        const isHealthy = service.status === 'healthy';
+                        statusHTML += `
+                            <div class="status-item">
+                                <span>
+                                    <span class="status-indicator ${isHealthy ? 'status-healthy' : 'status-unhealthy'}"></span>
+                                    ${serviceName.charAt(0).toUpperCase() + serviceName.slice(1)} Service
+                                </span>
+                                <span>${isHealthy ? 'Healthy' : 'Unhealthy'}</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    statusHTML = '<div class="status-item">System information unavailable</div>';
+                }
+                
+                statusDiv.innerHTML = statusHTML;
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status-item error">Error checking status: ${error.message}</div>`;
+            }
+        }
+        
+        // Load system status on page load
+        window.addEventListener('DOMContentLoaded', checkSystemStatus);
+    </script>
+</body>
+</html>
