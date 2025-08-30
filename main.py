@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import uvicorn
@@ -30,10 +29,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Service URLs
+# Service URLs - Updated for Railway deployment
 SERVICES = {
     "hospital": "https://affectionate-benevolence-production-641e.up.railway.app",
-    "insurance": "https://fearless-endurance-production.up.railway.app", 
+    "insurance": "https://fearless-endurance-production.up.railway.app",
     "rag": "https://selfless-joy-production.up.railway.app"
 }
 
@@ -135,6 +134,32 @@ async def call_service(service_name: str, endpoint: str, method: str = "GET", da
     
     return None
 
+# Serve frontend
+@app.get("/", response_class=HTMLResponse)
+async def serve_frontend():
+    """Serve the frontend HTML file"""
+    try:
+        with open("index.html", "r", encoding="utf-8") as file:
+            return HTMLResponse(content=file.read())
+    except FileNotFoundError:
+        return HTMLResponse(
+            content="""
+            <html>
+                <body>
+                    <h1>HealthGuard AI Railway</h1>
+                    <p>Frontend not found. API is available at:</p>
+                    <ul>
+                        <li>Health Check: <a href="/health">/health</a></li>
+                        <li>Query API: POST /api/query</li>
+                        <li>Hospital Search: POST /api/hospital/search</li>
+                        <li>Insurance Search: POST /api/insurance/search</li>
+                    </ul>
+                </body>
+            </html>
+            """,
+            status_code=200
+        )
+
 # Health check endpoint
 @app.get("/health", response_model=HealthCheckResponse)
 async def health_check():
@@ -182,14 +207,44 @@ async def process_query(request: QueryRequest):
                 "gateway": "main"
             }
         else:
-            # Fallback when RAG service is down
-            logger.warning("RAG service unavailable, providing fallback response")
+            # Fallback: Try to get data from individual services and create a response
+            logger.warning("RAG service unavailable, trying fallback approach")
+            
+            # Try hospital service
+            hospital_data = await call_service("hospital", "search", "POST", request.dict())
+            insurance_data = await call_service("insurance", "search", "POST", request.dict())
+            
+            # Create a fallback response
+            fallback_answer = "I found the following information:\n"
+            sources = {}
+            
+            if hospital_data and hospital_data.get('status') == 'success':
+                hospitals = hospital_data.get('data', [])
+                if hospitals:
+                    fallback_answer += f"\nHospitals ({len(hospitals)} found):\n"
+                    for hospital in hospitals[:2]:  # Limit to 2
+                        fallback_answer += f"• {hospital['name']} - {hospital['location']}\n"
+                sources['hospital'] = hospital_data
+            
+            if insurance_data and insurance_data.get('status') == 'success':
+                plans = insurance_data.get('data', [])
+                if plans:
+                    fallback_answer += f"\nInsurance Plans ({len(plans)} found):\n"
+                    for plan in plans[:2]:  # Limit to 2
+                        fallback_answer += f"• {plan['plan_name']} - ${plan['monthly_premium']}/month\n"
+                sources['insurance'] = insurance_data
+            
+            if not sources:
+                fallback_answer = "Services are temporarily unavailable. Please try again later."
+            
             return {
                 "status": "degraded",
                 "data": {
-                    "answer": "Our intelligent query system is temporarily unavailable. You can still access individual services through the direct search options.",
-                    "confidence": 0.1,
-                    "sources": {"error": "RAG service unavailable"}
+                    "status": "success",
+                    "answer": fallback_answer,
+                    "confidence": 0.7 if sources else 0.1,
+                    "sources": sources,
+                    "service": "gateway_fallback"
                 },
                 "timestamp": datetime.now().isoformat(),
                 "gateway": "main"
@@ -258,27 +313,6 @@ async def reset_circuit_breakers():
         }
     
     return {"message": "All circuit breakers reset", "timestamp": datetime.now().isoformat()}
-
-# Serve static files (for frontend)
-# Uncomment if you have a static frontend
-# app.mount("/static", StaticFiles(directory="static"), name="static")
-
-@app.get("/")
-async def root():
-    """Root endpoint with API information"""
-    return {
-        "service": "Healthcare Gateway",
-        "version": "1.0.0",
-        "status": "running",
-        "endpoints": {
-            "main_query": "/api/query",
-            "health_check": "/health",
-            "status": "/api/status",
-            "direct_hospital": "/api/hospital/search",
-            "direct_insurance": "/api/insurance/search"
-        },
-        "timestamp": datetime.now().isoformat()
-    }
 
 if __name__ == "__main__":
     uvicorn.run(
