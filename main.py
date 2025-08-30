@@ -32,9 +32,9 @@ app.add_middleware(
 
 # Service URLs
 SERVICES = {
-    "hospital": "http://localhost:8001",
-    "insurance": "http://localhost:8002", 
-    "rag": "http://localhost:8003"
+    "hospital": "https://affectionate-benevolence-production-641e.up.railway.app",
+    "insurance": "https://fearless-endurance-production.up.railway.app", 
+    "rag": "https://selfless-joy-production.up.railway.app"
 }
 
 REQUEST_TIMEOUT = 15.0
